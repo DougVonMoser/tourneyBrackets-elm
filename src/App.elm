@@ -7,7 +7,7 @@ import Array exposing (..)
 
 
 type alias Round =
-    Array.Array (Cell)
+    Array.Array Cell
 
 
 type alias Model =
@@ -15,8 +15,7 @@ type alias Model =
 
 
 type alias Team =
-    { 
-        name : String
+    { name : String
     }
 
 
@@ -37,22 +36,22 @@ init : ( Model, Cmd Msg )
 init =
     ( fromList
         [ fromList
-            [ Active { name = "hedgehogs"}
-            , Active { name = "pandas"}
-            , Active { name = "disciples"}
-            , Active { name = "fivers"}
-            , Active { name = "blues"}
-            , Active { name = "fighting"}
-            , Active { name = "aardvark"}
-            , Active { name = "alans"}
-            , Active { name = "keyboards"}
-            , Active { name = "paddles"}
-            , Active { name = "mice"}
-            , Active { name = "knights"}
-            , Active { name = "aldeans"}
-            , Active { name = "spartans"}
-            , Active { name = "scooters"}
-            , Active { name = "squirrels"}
+            [ Active { name = "hedgehogs" }
+            , Active { name = "pandas" }
+            , Active { name = "disciples" }
+            , Active { name = "fivers" }
+            , Active { name = "blues" }
+            , Active { name = "fighting" }
+            , Active { name = "aardvark" }
+            , Active { name = "alans" }
+            , Active { name = "keyboards" }
+            , Active { name = "paddles" }
+            , Active { name = "mice" }
+            , Active { name = "knights" }
+            , Active { name = "aldeans" }
+            , Active { name = "spartans" }
+            , Active { name = "scooters" }
+            , Active { name = "squirrels" }
             ]
         , fromList [ Blank, Blank, Blank, Blank, Blank, Blank, Blank, Blank ]
         , fromList [ Blank, Blank, Blank, Blank ]
@@ -81,54 +80,55 @@ type alias Selection =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
     case message of
-        Select selected ->
+        Select selection ->
             let
                 newRoundIdx =
-                    selected.roundIdx + 1
+                    selection.roundIdx + 1
 
                 bootedCell =
-                    getBooted (selected.teamIdx // 2) (get newRoundIdx model)
+                    getBooted (selection.teamIdx // 2) (get newRoundIdx model)
 
                 newModel =
                     Array.indexedMap
                         (\roundIdx roundy ->
-                            (Array.indexedMap (mapCell selected roundIdx newRoundIdx bootedCell) roundy)
+                            Array.indexedMap (mapCell selection roundIdx newRoundIdx bootedCell) roundy
                         )
                         model
             in
                 ( newModel, Cmd.none )
 
 
-mapCell : Selection -> Int -> Int -> Cell -> Int ->  Cell -> Cell
-mapCell selected roundIdx newRoundIdx bootedCell teamIdx existingCell =
-    let
-        roundDiff =
-            roundIdx - selected.roundIdx
 
+-- v lol this type signature v
+mapCell : Selection -> Int -> Int -> Cell -> Int -> Cell -> Cell
+mapCell selection roundIdx newRoundIdx bootedCell teamIdx existingCell =
+    let
         currentRoundsSelectedTeamsPath =
-            determineTeamIdxPath roundDiff selected.teamIdx
+            determineTeamIdxPath roundIdx selection
     in
         if teamIdx /= currentRoundsSelectedTeamsPath || roundIdx < newRoundIdx then
             existingCell
         else if roundIdx == newRoundIdx then
-            Active selected.team
-        else    -- roundIdx must be > newRoundIdx
-            case (bootedCell, existingCell) of
-                (Active bootedTeam, Active existingTeam) ->
-                    if bootedTeam.name == existingTeam.name && existingTeam.name /= selected.team.name then
+            Active selection.team
+        else
+            -- at this point roundIdx must be > newRoundIdx
+            case ( bootedCell, existingCell ) of
+                ( Active bootedTeam, Active existingTeam ) ->
+                    if bootedTeam.name == existingTeam.name && existingTeam.name /= selection.team.name then
                         Blank
                     else
                         existingCell
 
                 _ ->
                     existingCell
-                                
+
 
 getBooted : Int -> Maybe Round -> Cell
 getBooted idxToGrab roundy =
     case roundy of
         Just roundyVal ->
             case get idxToGrab roundyVal of
+                -- this should be the only branch we ever ever hit in this function
                 Just teamy ->
                     teamy
 
@@ -139,12 +139,17 @@ getBooted idxToGrab roundy =
             Blank
 
 
-determineTeamIdxPath : Int -> Int -> Int
-determineTeamIdxPath roundDiff selectedTeamIdx =
-    if roundDiff <= 0 then
-        selectedTeamIdx
-    else
-        determineTeamIdxPath (roundDiff - 1) (selectedTeamIdx // 2)
+
+determineTeamIdxPath : Int -> Selection -> Int
+determineTeamIdxPath roundIdx selection =
+    let
+        roundDiff =
+            roundIdx - selection.roundIdx
+    in
+        if roundDiff <= 0 then
+            selection.teamIdx
+        else
+            determineTeamIdxPath (roundDiff - 1) ({ selection | teamIdx = selection.teamIdx // 2 })
 
 
 
@@ -188,4 +193,3 @@ viewTeam roundIdx roundy =
                     div [ class "team" ] [ text "(- - -)" ]
         )
         roundy
-
