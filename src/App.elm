@@ -20,6 +20,7 @@ type alias Team =
     }
 
 
+-- played cells wont have onlicks; will have static scores, grayed out styles
 type alias PlayedCell =
     { team : Team
     , score : String
@@ -105,18 +106,13 @@ update message model =
                                             existingCell
                                         else if roundIdx == newRoundIdx then
                                             Active selected.team
-                                        else
-                                            case bootedCell of
-                                                Active booted ->
-                                                    case existingCell of
-                                                        Active teamyy ->
-                                                            if booted.name == teamyy.name && teamyy.name /= selected.team.name then
-                                                                Blank
-                                                            else
-                                                                existingCell
-
-                                                        _ ->
-                                                            Blank
+                                        else    -- roundIdx must be > newRoundIdx
+                                            case (bootedCell, existingCell) of
+                                                (Active bootedTeam, Active existingTeam) ->
+                                                    if bootedTeam.name == existingTeam.name && existingTeam.name /= selected.team.name then
+                                                        Blank
+                                                    else
+                                                        existingCell
 
                                                 _ ->
                                                     existingCell
