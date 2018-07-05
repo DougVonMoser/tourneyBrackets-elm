@@ -92,38 +92,37 @@ update message model =
                 newModel =
                     Array.indexedMap
                         (\roundIdx roundy ->
-                            (Array.indexedMap
-                                -- this anonymous function returns a Cell
-                                (\teamIdx existingCell ->
-                                    let
-                                        roundDiff =
-                                            roundIdx - selected.roundIdx
-
-                                        currentRoundsSelectedTeamsPath =
-                                            determineTeamIdxPath roundDiff selected.teamIdx
-                                    in
-                                        if teamIdx /= currentRoundsSelectedTeamsPath || roundIdx < newRoundIdx then
-                                            existingCell
-                                        else if roundIdx == newRoundIdx then
-                                            Active selected.team
-                                        else    -- roundIdx must be > newRoundIdx
-                                            case (bootedCell, existingCell) of
-                                                (Active bootedTeam, Active existingTeam) ->
-                                                    if bootedTeam.name == existingTeam.name && existingTeam.name /= selected.team.name then
-                                                        Blank
-                                                    else
-                                                        existingCell
-
-                                                _ ->
-                                                    existingCell
-                                )
-                                roundy
-                            )
+                            (Array.indexedMap (mapCell selected roundIdx newRoundIdx bootedCell) roundy)
                         )
                         model
             in
                 ( newModel, Cmd.none )
 
+
+mapCell : Selection -> Int -> Int -> Cell -> Int ->  Cell -> Cell
+mapCell selected roundIdx newRoundIdx bootedCell teamIdx existingCell =
+    let
+        roundDiff =
+            roundIdx - selected.roundIdx
+
+        currentRoundsSelectedTeamsPath =
+            determineTeamIdxPath roundDiff selected.teamIdx
+    in
+        if teamIdx /= currentRoundsSelectedTeamsPath || roundIdx < newRoundIdx then
+            existingCell
+        else if roundIdx == newRoundIdx then
+            Active selected.team
+        else    -- roundIdx must be > newRoundIdx
+            case (bootedCell, existingCell) of
+                (Active bootedTeam, Active existingTeam) ->
+                    if bootedTeam.name == existingTeam.name && existingTeam.name /= selected.team.name then
+                        Blank
+                    else
+                        existingCell
+
+                _ ->
+                    existingCell
+                                
 
 getBooted : Int -> Maybe Round -> Cell
 getBooted idxToGrab roundy =
