@@ -6,24 +6,58 @@ import Html.Events exposing (..)
 import Array exposing (..)
 
 
+type alias Round =
+    Array.Array (Cell)
 
-type alias Round = 
-    Array.Array (Maybe String)
 
 type alias Model =
     Array.Array Round
 
+
+type alias Team =
+    { 
+        name : String
+    }
+
+
+type alias PlayedCell =
+    { team : Team
+    , score : String
+    }
+
+
+type Cell
+    = Blank
+    | Active Team
+    | Played PlayedCell
+
+
 init : ( Model, Cmd Msg )
 init =
-    ( fromList [ fromList [ Just "hedgehogs", Just "pandas", Just "disciples", Just "fivers" 
-        , Just "blues", Just "fighting", Just "aardvark", Just "alans"
-        , Just "keyboards", Just "paddles", Just "mice", Just "knights" 
-        , Just "aldeans", Just "spartans", Just "scooters", Just "squirrels"  ]
-      , fromList [ Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing ]
-      , fromList [ Nothing, Nothing, Nothing, Nothing ]
-      , fromList [ Nothing, Nothing ]
-      , fromList [ Nothing ]
-      ]
+    ( fromList
+        [ fromList
+            [ Active { name = "hedgehogs"}
+            , Active { name = "pandas"}
+            , Active { name = "disciples"}
+            , Active { name = "fivers"}
+            , Active { name = "blues"}
+            , Active { name = "fighting"}
+            , Active { name = "aardvark"}
+            , Active { name = "alans"}
+            , Active { name = "keyboards"}
+            , Active { name = "paddles"}
+            , Active { name = "mice"}
+            , Active { name = "knights"}
+            , Active { name = "aldeans"}
+            , Active { name = "spartans"}
+            , Active { name = "scooters"}
+            , Active { name = "squirrels"}
+            ]
+        , fromList [ Blank, Blank, Blank, Blank, Blank, Blank, Blank, Blank ]
+        , fromList [ Blank, Blank, Blank, Blank ]
+        , fromList [ Blank, Blank ]
+        , fromList [ Blank ]
+        ]
     , Cmd.none
     )
 
@@ -39,7 +73,7 @@ type Msg
 type alias Selection =
     { roundIdx : Int
     , teamIdx : Int
-    , team : String
+    , team : Team
     }
 
 
@@ -48,69 +82,75 @@ update message model =
     case message of
         Select selected ->
             let
-                    
                 newRoundIdx =
                     selected.roundIdx + 1
 
-                bootedTeam =
+                bootedCell =
                     getBooted (selected.teamIdx // 2) (get newRoundIdx model)
 
                 newModel =
                     Array.indexedMap
                         (\roundIdx roundy ->
                             (Array.indexedMap
-                                (\teamIdx team ->
-                                    let 
+                                -- this anonymous function returns a Cell
+                                (\teamIdx existingCell ->
+                                    let
                                         roundDiff =
                                             roundIdx - selected.roundIdx
+
                                         currentRoundsSelectedTeamsPath =
                                             determineTeamIdxPath roundDiff selected.teamIdx
-                                    in 
-                                        if roundIdx == newRoundIdx && teamIdx == currentRoundsSelectedTeamsPath then
-                                            Just selected.team
-                                        else if roundIdx > newRoundIdx && teamIdx == currentRoundsSelectedTeamsPath then
-                                            case bootedTeam of
-                                                Just boot ->
-                                                    case team of
-                                                        Just teamyy ->
-                                                            if boot == teamyy && teamyy /= selected.team then
-                                                                Nothing
-                                                            else
-                                                                Just teamyy
-                                                        Nothing ->
-                                                            Nothing
-
-                                                Nothing ->
-                                                    team
+                                    in
+                                        if teamIdx /= currentRoundsSelectedTeamsPath || roundIdx < newRoundIdx then
+                                            existingCell
+                                        else if roundIdx == newRoundIdx then
+                                            Active selected.team
                                         else
-                                            team
+                                            case bootedCell of
+                                                Active booted ->
+                                                    case existingCell of
+                                                        Active teamyy ->
+                                                            if booted.name == teamyy.name && teamyy.name /= selected.team.name then
+                                                                Blank
+                                                            else
+                                                                existingCell
+
+                                                        _ ->
+                                                            Blank
+
+                                                _ ->
+                                                    existingCell
                                 )
                                 roundy
                             )
                         )
                         model
-                    
             in
                 ( newModel, Cmd.none )
 
-getBooted : Int -> Maybe Round -> Maybe String
+
+getBooted : Int -> Maybe Round -> Cell
 getBooted idxToGrab roundy =
     case roundy of
         Just roundyVal ->
             case get idxToGrab roundyVal of
                 Just teamy ->
                     teamy
-                Nothing ->
-                    Nothing
-        Nothing ->
-            Nothing
+
+                _ ->
+                    Blank
+
+        _ ->
+            Blank
+
 
 determineTeamIdxPath : Int -> Int -> Int
 determineTeamIdxPath roundDiff selectedTeamIdx =
     if roundDiff <= 0 then
         selectedTeamIdx
-    else 
+    else
         determineTeamIdxPath (roundDiff - 1) (selectedTeamIdx // 2)
+
 
 
 -- VIEW
@@ -119,64 +159,38 @@ determineTeamIdxPath roundDiff selectedTeamIdx =
 view : Model -> Html Msg
 view model =
     div [ class "container" ]
-        (Array.toList (Array.indexedMap
-            (\roundIdx roundy ->
-                div [ class "round" ]
-                    (Array.toList (viewTeam roundIdx roundy))
+        (Array.toList
+            (Array.indexedMap
+                (\roundIdx roundy ->
+                    div [ class "round" ]
+                        (Array.toList (viewTeam roundIdx roundy))
+                )
+                model
             )
-            model
-        ))
+        )
 
 
-viewTeam : Int -> Array (Maybe String) -> Array (Html Msg)
+viewTeam : Int -> Round -> Array (Html Msg)
 viewTeam roundIdx roundy =
     Array.indexedMap
-        (\teamIdx team ->
-            case team of
-                Just teamy ->
+        (\teamIdx cell ->
+            case cell of
+                Active team ->
                     div
                         [ class "team"
                         , onClick
                             (Select
                                 ({ roundIdx = roundIdx
-                                , teamIdx = teamIdx
-                                , team = teamy
-                                }
+                                 , teamIdx = teamIdx
+                                 , team = team
+                                 }
                                 )
                             )
                         ]
-                        [ text (getThing team) ]
-                Nothing ->
-                    div [class "team"] [text "(- - -)"]
+                        [ text team.name ]
+
+                _ ->
+                    div [ class "team" ] [ text "(- - -)" ]
         )
         roundy
 
-
-getThing : Maybe String -> String
-getThing val =
-    case val of
-        Just sumtin ->
-            sumtin
-
-        Nothing ->
-            "(blank)"
-
-
-
-{-
-   div [className "container"] [
-       div [className "round"] [
-           div [className "team"] [text "hedgehogs"]
-           , div [className "team"] [text "pandas"]
-           , div [className "team"] [text "disciples"]
-           , div [className "team"] [text "fivers"]
-       ]
-       , div [className "round"] [
-           div [className "team"] [text "hedgehogs"]
-           , div [className "team"] [text "disciples"]
-       ]
-       , div [className "round"] [
-           div [className "team"] [text "disciples"]
-       ]
-   ]
--}

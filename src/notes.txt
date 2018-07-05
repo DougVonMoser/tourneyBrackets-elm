@@ -1,0 +1,21 @@
+a couple different directions to take
+
+- refactor to a CellState type
+    + Blank | Active {team} | Played {team,score} | NeedsAction
+
+- have data sit on a server, start with a cmd to getData
+
+- add submit button with an ajax of selections
+
+- style it to look like a bracket
+
+
+
+
+________________________________________________________________
+
+
+
+is this elm-webpack-starter using webpack dev server? yes
+can we add an endpoint to webpack dev server?
+
